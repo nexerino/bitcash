@@ -84,7 +84,7 @@ class BitcoinDotComAPI():
     TEST_ENDPOINT = 'https://trest.bitcoin.com/v2/'
     TEST_ADDRESS_API = TEST_ENDPOINT + 'address/details/{}'
     TEST_UNSPENT_API = TEST_ENDPOINT + 'address/utxo/{}'
-    TEST_TX_PUSH_API = TEST_ENDPOINT + '/rawtransactions/sendRawTransaction/{}'
+    TEST_TX_PUSH_API = TEST_ENDPOINT + 'rawtransactions/sendRawTransaction/{}'
     TEST_TX_API = TEST_ENDPOINT + 'transaction/details/{}'
     TEST_TX_AMOUNT_API = TEST_TX_API
     TEST_RAW_API = TEST_ENDPOINT + 'transaction/details/{}'
@@ -92,7 +92,7 @@ class BitcoinDotComAPI():
     REGTEST_ENDPOINT = 'http://localhost:12500/v2/'
     REGTEST_ADDRESS_API = REGTEST_ENDPOINT + 'address/details/{}'
     REGTEST_UNSPENT_API = REGTEST_ENDPOINT + 'address/utxo/{}'
-    REGTEST_TX_PUSH_API = REGTEST_ENDPOINT + '/rawtransactions/sendRawTransaction/{}'
+    REGTEST_TX_PUSH_API = REGTEST_ENDPOINT + 'rawtransactions/sendRawTransaction/{}'
     REGTEST_TX_API = REGTEST_ENDPOINT + 'transaction/details/{}'
     REGTEST_TX_AMOUNT_API = REGTEST_TX_API
     REGTEST_RAW_API = REGTEST_ENDPOINT + 'transaction/details/{}'
