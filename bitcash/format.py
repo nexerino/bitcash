@@ -51,8 +51,10 @@ def get_version(address):
         return 'main'
     elif address.version == 'P2PKH-TESTNET':
         return 'test'
+    elif address.version == 'P2PKH-REGTEST':
+        return 'regtest'
     else:
-        raise ValueError('{} does not correspond to a mainnet nor '
+        raise ValueError('{} does not correspond to a mainnet, regtest, nor '
                          'testnet P2PKH address.'.format(address.version))
 
 
@@ -112,6 +114,8 @@ def wif_checksum_check(wif):
 def public_key_to_address(public_key, version='main'):
     if version == 'test':
         version = 'P2PKH-TESTNET'
+    elif version == 'regtest':
+        version = 'P2PKH-REGTEST'
     elif version == 'main':
         version = 'P2PKH'
     else:
