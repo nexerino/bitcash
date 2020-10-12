@@ -62,7 +62,7 @@ def get_version(address):
     elif address.version == 'P2PKH-REGTEST':
         return 'regtest'
     else:
-        raise ValueError('{} does not correspond to a mainnet testnet, nor '
+        raise ValueError('{} does not correspond to a mainnet, testnet, nor '
                          'regtest P2PKH address.'.format(address.version))
 
 
@@ -93,6 +93,8 @@ def wif_to_bytes(wif, regtest=False):
 
     if version == MAIN_PRIVATE_KEY:
         version = 'main'
+    elif version == REG_PRIVATE_KEY:
+        version = 'regtest'
     elif version == TEST_PRIVATE_KEY:
         version = 'test'
     else:
