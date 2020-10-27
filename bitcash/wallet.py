@@ -8,6 +8,7 @@ from bitcash.format import (
 )
 from bitcash.network import NetworkAPI, get_fee, satoshi_to_currency_cached
 from bitcash.network.meta import Unspent
+from bitcash.network.slp_services import SlpAPI
 from bitcash.transaction import (
     calc_txid, create_p2pkh_transaction, sanitize_tx_data,
     OP_CHECKSIG, OP_DUP, OP_EQUALVERIFY, OP_HASH160, OP_PUSH_20
@@ -145,6 +146,7 @@ class PrivateKey(BaseKey):
         super().__init__(wif=wif)
 
         self._address = None
+        self._slp_address = None
         self._scriptcode = None
 
         self.balance = 0
@@ -158,6 +160,15 @@ class PrivateKey(BaseKey):
             self._address = public_key_to_address(self._public_key, version='main')
 
         return self._address
+
+    @property
+    def slp_address(self):
+        """The public address you share with others to receive funds."""
+        if self._slp_address is None:
+            self._slp_address = public_key_to_address(self._public_key, version='main', slp=True)
+
+        return self._slp_address
+
 
     @property
     def scriptcode(self):
@@ -194,6 +205,20 @@ class PrivateKey(BaseKey):
         self.unspents[:] = NetworkAPI.get_unspent(self.address)
         self.balance = sum(unspent.amount for unspent in self.unspents)
         return self.balance_as(currency)
+
+    def get_slp_balance(self, tokenId=None):
+        """Fetches the current balance by calling
+        :func:`~bitcash.PrivateKey.get_balance` and returns it using
+        :func:`~bitcash.PrivateKey.balance_as`.
+
+        :param currency: One of the :ref:`supported currencies`.
+        :type currency: ``str``
+        :rtype: ``str``
+        """
+        balance = SlpAPI.get_balance(self.slp_address, tokenId=tokenId)
+
+        return balance
+
 
     def get_unspents(self):
         """Fetches all available unspent transaction outputs.

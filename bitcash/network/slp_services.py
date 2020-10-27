@@ -103,7 +103,7 @@ class SlpAPI():
 
             return [
                 
-                (a['_id'],
+                (
                 a['token'][0]['tokenDetails']['name'],
                 a['slpAmount']
                 )
@@ -176,7 +176,7 @@ class SlpAPI():
 
         return [
             
-            (a['_id'],
+            (
             a['token'][0]['tokenDetails']['name'],
             a['slpAmount']
             )
@@ -204,8 +204,19 @@ class SlpAPI():
 
         path = cls.query_to_url(query)
         r = requests.get(url = path, timeout=DEFAULT_TIMEOUT)
-       
-        return r.json()
+        j = r.json()['t']
+
+        return [
+            (
+             a['tokenDetails']['tokenIdHex'],
+             a['tokenDetails']['documentUri'],
+             a['tokenDetails']['documentSha256Hex'],
+             a['tokenDetails']['symbol'],
+             a['tokenDetails']['name'],
+             a['tokenDetails']['genesisOrMintQuantity']   
+            )
+            for a in j
+        ]
 
 
     @classmethod
@@ -330,4 +341,3 @@ class SlpAPI():
 
             for a in j
         ]
-    
