@@ -5,7 +5,7 @@ import requests
 import base64
 from decimal import Decimal
 
-from bitcash.network import currency_to_satoshi
+from bitcash.network import currency_to_satoshi, NetworkAPI
 from bitcash.network.meta import Unspent
 from bitcash.network.transaction import Transaction, TxPart
 
@@ -263,6 +263,11 @@ class SlpAPI():
                     "$match": {
                     "address": address
                     }
+                },
+                {
+                  "$sort": {
+                    "token_balance": -1
+                  }
                 }
               ],
               "limit": limit
@@ -341,3 +346,21 @@ class SlpAPI():
 
             for a in j
         ]
+
+
+    @classmethod
+    def slp_unspent_to_unspent(cls, address, slp_unspents):
+      unspents = NetworkAPI.get_unspent(address)
+      index = 0
+
+      matched = []
+
+      for index, unspent in enumerate(unspents):
+        for slp_unspent in slp_unspents:
+          if slp_unspent[2] == unspent.txid:
+            print("Success", index)
+            matched.append(unspent)
+            print(matched)
+          
+
+      return matched
