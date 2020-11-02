@@ -290,6 +290,75 @@ class SlpAPI():
             for a in j
         ]
 
+    @classmethod
+    def get_all_slp_utxo_by_address(cls, address, limit=100):
+        # tokenId = "7f27766677948e02aca409bf344632f3e8e350105017ef14d88fc2c048347146"
+        # address = "simpleledger:qpt8z56sjcng8eux4pgvl7msnns2fzj05s89rl7w90"
+
+        query = {
+            "v": 3,
+            "q": {
+              "db": ["g"],
+              "aggregate": [
+                {
+                  "$match": {
+                    "graphTxn.outputs": {
+                      "$elemMatch": {
+                        "status": "UNSPENT",
+                        "slpAmount": { "$gte": 0 }
+                      }
+                    }
+                  }
+                },
+                {
+                  "$unwind": "$graphTxn.outputs"
+                },
+                {
+                  "$match": {
+                    "graphTxn.outputs.status": "UNSPENT",
+                    "graphTxn.outputs.slpAmount": { "$gte": 0 }
+                  }
+                },
+                {
+                  "$project": {
+                    "token_balance": "$graphTxn.outputs.slpAmount",
+                    "address": "$graphTxn.outputs.address",
+                    "txid": "$graphTxn.txid",
+                    "vout": "$graphTxn.outputs.vout",
+                    "tokenId": "$tokenDetails.tokenIdHex"
+                  }
+                },
+                {
+                    "$match": {
+                    "address": address
+                    }
+                },
+                {
+                  "$sort": {
+                    "token_balance": -1
+                  }
+                }
+              ],
+              "limit": limit
+            }
+          }
+
+        path = cls.query_to_url(query)
+        r = requests.get(url = path, timeout=DEFAULT_TIMEOUT)
+        j = r.json()['g']
+
+        return [
+            
+            (#a['_id'],
+            a['token_balance'],
+            a['address'],
+            a['txid'],
+            a['vout']
+            )
+
+            for a in j
+        ]
+
 
     @classmethod
     def get_mint_baton(cls, tokenId, limit=10):
@@ -364,3 +433,38 @@ class SlpAPI():
           
 
       return matched
+
+
+    @classmethod
+    def filter_slp_txid(cls, address, slp_address, unspents, slp_unspents):
+      unspents = NetworkAPI.get_unspent(address)
+      unspents_copy = unspents.copy()
+      new_unspents = []
+      all_utxos = SlpAPI.get_all_slp_utxo_by_address(slp_address)
+      index = 0
+
+      print("before slicing")
+      print(unspents)
+
+      for unspent in unspents_copy:
+        for utxo in all_utxos:
+          if utxo[2] == unspent.txid and utxo[3] == unspent.txindex:
+            print()
+          else:
+            new_unspents.append(unspent)
+            print("adding to new_unspents")
+            print(new_unspents)
+
+      fixed = SlpAPI.slp_unspent_to_unspent(address, slp_unspents)
+
+      print("after slicing")
+      print(unspents)
+      fixed.extend(new_unspents)
+
+      print("new_unspents")
+      print(new_unspents)
+      print("fixed")
+      print(fixed)
+
+
+      return fixed
