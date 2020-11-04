@@ -389,7 +389,7 @@ def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, 
     print(unspents)
 
     # we dont need to convert. we need to VERIFY that the unspents are kept. Need to remove this in slp_services
-    # converted = SlpAPI.slp_unspent_to_unspent(address, slp_unspents)
+    unspents = SlpAPI.filter_slp_txid(address, slp_address, unspents, slp_unspents) 
     print("unspents")
     print(unspents)
     # print("converted")
@@ -403,12 +403,12 @@ def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, 
 ##############################################################################################################################
         
 
-    for i, output in enumerate(outputs):
-        dest, amount, currency = output
-        # LEGACYADDRESSDEPRECATION
-        # FIXME: Will be removed in an upcoming release, breaking compatibility with legacy addresses.
-        # dest = cashaddress.to_cash_address(dest, regtest)
-        outputs[i] = (dest, currency_to_satoshi_cached(amount, currency))
+    # for i, output in enumerate(outputs):
+    #     dest, amount, currency = output
+    #     # LEGACYADDRESSDEPRECATION
+    #     # FIXME: Will be removed in an upcoming release, breaking compatibility with legacy addresses.
+    #     # dest = cashaddress.to_cash_address(dest, regtest)
+    #     outputs[i] = (dest, currency_to_satoshi_cached(amount, currency))
 
     if not unspents:
         raise ValueError('Transactions must have at least one unspent.')
