@@ -417,54 +417,36 @@ class SlpAPI():
         ]
 
 
-    @classmethod
-    def slp_unspent_to_unspent(cls, address, slp_unspents):
-      unspents = NetworkAPI.get_unspent(address)
-      index = 0
+    # @classmethod
+    # def slp_unspent_to_unspent(cls, address, slp_unspents):
+    #   unspents = NetworkAPI.get_unspent(address)
+    #   index = 0
 
-      matched = []
+    #   matched = []
 
-      for index, unspent in enumerate(unspents):
-        for slp_unspent in slp_unspents:
-          if slp_unspent[2] == unspent.txid:
-            print("Success", index)
-            matched.append(unspent)
-            print(matched)
+    #   for index, unspent in enumerate(unspents):
+    #     for slp_unspent in slp_unspents:
+    #       if slp_unspent[2] == unspent.txid:
+    #         print("Success", index)
+    #         matched.append(unspent)
+    #         print(matched)
           
 
-      return matched
+    #   return matched
 
 
     @classmethod
     def filter_slp_txid(cls, address, slp_address, unspents, slp_unspents):
-      unspents = NetworkAPI.get_unspent(address)
-      unspents_copy = unspents.copy()
-      new_unspents = []
-      all_utxos = SlpAPI.get_all_slp_utxo_by_address(slp_address)
-      index = 0
 
-      print("before slicing")
-      print(unspents)
-
-      for unspent in unspents_copy:
-        for utxo in all_utxos:
-          if utxo[2] == unspent.txid and utxo[3] == unspent.txindex:
-            print()
-          else:
-            new_unspents.append(unspent)
-            print("adding to new_unspents")
-            print(new_unspents)
-
-      fixed = SlpAPI.slp_unspent_to_unspent(address, slp_unspents)
-
-      print("after slicing")
-      print(unspents)
-      fixed.extend(new_unspents)
-
-      print("new_unspents")
-      print(new_unspents)
-      print("fixed")
-      print(fixed)
+      slp_utxos = SlpAPI.get_all_slp_utxo_by_address(slp_address)
 
 
-      return fixed
+      def _is_slp(unspent, slp_utxos):
+          return (unspent.txid, unspent.txindex) in [(slp_utxo[2], slp_utxo[3]) for slp_utxo in slp_utxos]
+
+      difference = [unspent for unspent in unspents if not _is_slp(unspent, slp_utxos)]
+      slp_utxos = [unspent for unspent in unspents if _is_slp(unspent, slp_utxos)]
+
+
+      # return slp_utxos + difference
+      return {"slp_utxos": slp_utxos, "difference": difference}

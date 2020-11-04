@@ -237,7 +237,7 @@ class PrivateKey(BaseKey):
         self.transactions[:] = NetworkAPI.get_transactions(self.address)
         return self.transactions
 
-    def create_transaction(self, outputs, fee=None, leftover=None, combine=True,
+    def create_transaction(self, outputs, fee=None, leftover=None, combine=False,
                            message=None, unspents=None, custom_pushdata=False):  # pragma: no cover
         """Creates a signed P2PKH transaction.
 
@@ -285,7 +285,7 @@ class PrivateKey(BaseKey):
         return create_p2pkh_transaction(self, unspents, outputs, custom_pushdata=custom_pushdata)
 
 
-    def create_slp_transaction(self, outputs, tokenId, fee=None, leftover=None, combine=True,
+    def create_slp_transaction(self, outputs, tokenId, fee=None, leftover=None, combine=False,
                            message=None, unspents=None, custom_pushdata=False):  # pragma: no cover
         """Creates a signed P2PKH transaction.
 
@@ -333,9 +333,9 @@ class PrivateKey(BaseKey):
             custom_pushdata=custom_pushdata
         )
 
-        # return create_p2pkh_transaction(self, unspents, outputs, custom_pushdata=custom_pushdata)
+        return create_p2pkh_transaction(self, unspents, outputs, custom_pushdata=custom_pushdata)
 
-        return unspents, outputs
+        #return unspents, outputs
 
 
     def send(self, outputs, fee=None, leftover=None, combine=True,
@@ -378,12 +378,12 @@ class PrivateKey(BaseKey):
             outputs, fee=fee, leftover=leftover, combine=combine, message=message, unspents=unspents
         )
 
-        NetworkAPI.broadcast_tx(tx_hex)
+        # NetworkAPI.broadcast_tx(tx_hex)
 
         return calc_txid(tx_hex)
 
 
-    def send_slp(self, outputs, tokenId, fee=None, leftover=None, combine=True,
+    def send_slp(self, outputs, tokenId, fee=None, leftover=None, combine=False,
              message=None, unspents=None):  # pragma: no cover
         """Creates a signed P2PKH transaction and attempts to broadcast it on
         the blockchain. This accepts the same arguments as
@@ -424,6 +424,7 @@ class PrivateKey(BaseKey):
         )
 
         # NetworkAPI.broadcast_tx(tx_hex)
+        print(tx_hex)
 
         return calc_txid(tx_hex)
 

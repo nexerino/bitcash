@@ -211,11 +211,18 @@ def sanitize_tx_data(unspents, outputs, fee, leftover, combine=True, message=Non
 
     outputs.extend(messages)
 
+    print("unspents")
+    print(unspents)
+
+
+    print("outputs")
+    print(outputs)
+
     return unspents, outputs
 
 
 
-def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, leftover, combine=True, combine_slp=True, message=None, compressed=True, custom_pushdata=False, regtest=False):
+def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, leftover, combine=False, combine_slp=True, message=None, compressed=True, custom_pushdata=False, regtest=False):
     """
     sanitize_tx_data()
 
@@ -242,32 +249,10 @@ def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, 
 
 
     slp_total_out = sum(slp_outputs)
-    print(slp_total_out)
-    # # output format = (Address, amount)
-    # slp outputs for op return, matching order of new outputs array.
+
     sum_slp_outputs = sum(slp_outputs)
     
     slp_unspents = SlpAPI.get_utxo_by_tokenId(slp_address, tokenId)
-    """ [('10',
-        'simpleledger:qrgs6cz47sfla37gnu7qpxgrrdhnywnmdsuaz2dcnp',
-        'c6e2dd64e02038c0f128456ce7ecd564871e204fe890f00c384d341b2662a279',
-        1),
-        ('5',
-        'simpleledger:qrgs6cz47sfla37gnu7qpxgrrdhnywnmdsuaz2dcnp',
-        'f291b6ea26ae4438ef923a6f5857bbc42a66fb0e16717eafad91297e90dfef43',
-        1),
-        ('2',
-        'simpleledger:qrgs6cz47sfla37gnu7qpxgrrdhnywnmdsuaz2dcnp',
-        '314eca3fadcbd6f82a56f9264882127511ac6ee41e591e3e051d06a33e734e3d',
-        1)]
-
-        quantity
-        address
-        txid
-        vout
-    """
-    print(slp_unspents)
-
 
     if combine_slp:
         # calculated_fee is in total satoshis.
@@ -277,7 +262,6 @@ def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, 
         
         for unspent in slp_unspents:
             slp_total_in += int(unspent[0])
-            print(slp_total_in)
 
     else:           
         index = 0
@@ -286,8 +270,6 @@ def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, 
             slp_total_in += int(unspent[0])
             # calculated_fee = estimate_tx_fee(len(unspents[:index + 1]), num_outputs, fee, compressed, total_op_return_size)
             slp_total_out = sum_slp_outputs
-            print(slp_total_in)
-            print(slp_total_out)
 
             if slp_total_in >= slp_total_out:
                 break
@@ -304,32 +286,17 @@ def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, 
                                 'fee).'.format(slp_total_in, slp_total_out))
 
 
-    print("before convert")
-    print(unspents)
-
     # we dont need to convert. we need to VERIFY that the unspents are kept. Need to remove this in slp_services
     unspents = SlpAPI.filter_slp_txid(address, slp_address, unspents, slp_unspents) 
-    print("unspents")
-    print(unspents)
-    # print("converted")
-    # print(converted)
-    # print("before")
-    # print(unspents)
-    # unspents.extend(converted)
-    # print("after conversion")
-    # print(unspents)
 
-##############################################################################################################################
-        
+    for i, output in enumerate(outputs):
+        dest, amount, currency = output
+        # LEGACYADDRESSDEPRECATION
+        # FIXME: Will be removed in an upcoming release, breaking compatibility with legacy addresses.
+        # dest = cashaddress.to_cash_address(dest, regtest)
+        outputs[i] = (dest, currency_to_satoshi_cached(amount, currency))
 
-    # for i, output in enumerate(outputs):
-    #     dest, amount, currency = output
-    #     # LEGACYADDRESSDEPRECATION
-    #     # FIXME: Will be removed in an upcoming release, breaking compatibility with legacy addresses.
-    #     # dest = cashaddress.to_cash_address(dest, regtest)
-    #     outputs[i] = (dest, currency_to_satoshi_cached(amount, currency))
-
-    if not unspents:
+    if not unspents["slp_utxos"] and not unspents["difference"]:
         raise ValueError('Transactions must have at least one unspent.')
 
     # Temporary storage so all outputs precede messages.
@@ -363,33 +330,36 @@ def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, 
     
     sum_outputs = sum(out[1] for out in outputs)
 
-    print("before combine")
-    print(unspents)
 
     if combine:
         # calculated_fee is in total satoshis.
         calculated_fee = estimate_tx_fee(len(unspents), num_outputs, fee, compressed, total_op_return_size)
         total_out = sum_outputs + calculated_fee
         unspents = unspents.copy()
-        print("inside combine")
-        print(unspent)
-        total_in += sum(unspent.amount for unspent in unspents)
+        total_in += sum(unspent.amount for unspent in unspents["slp_utxos"])
+        total_in += sum(unspent.amount for unspent in unspents["difference"])
+        unspents = unspents["slp_utxos"] + unspents["difference"]
 
     else:
-        unspents = sorted(unspents, key=lambda x: x.amount)
-
+        unspents["difference"] = sorted(unspents["difference"], key=lambda x: x.amount)
+        
         index = 0
 
-        for index, unspent in enumerate(unspents):
+        for index, unspent in enumerate(unspents["difference"]):
             total_in += unspent.amount
-            calculated_fee = estimate_tx_fee(len(unspents[:index + 1]), num_outputs, fee, compressed, total_op_return_size)
+            calculated_fee = estimate_tx_fee(
+                len(unspents["slp_utxos"] + unspents["difference"][:index + 1]), 
+                num_outputs, 
+                fee, 
+                compressed, 
+                total_op_return_size
+            )
             total_out = sum_outputs + calculated_fee
 
             if total_in >= total_out:
                 break
 
-        unspents[:] = unspents[:index + 1]
-
+        unspents = unspents["slp_utxos"] + unspents["difference"][:index + 1]
     remaining = total_in - total_out
 
     if remaining > 0:
@@ -399,13 +369,21 @@ def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, 
                                 'fee).'.format(total_in, total_out))
 
     outputs.extend(messages)
-    
+    # print("unspents")
+    # print(unspents)
+
+
+    # print("outputs")
+    # print(outputs)
     return unspents, outputs
 
 
 def construct_output_block(outputs, custom_pushdata=False):
 
     output_block = b''
+
+    print(outputs)
+
 
     for data in outputs:
         dest, amount = data

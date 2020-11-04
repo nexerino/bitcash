@@ -46,8 +46,8 @@ def verify_sig(signature, data, public_key):
 def address_to_public_key_hash(address, regtest=False):
     # LEGACYADDRESSDEPRECATION
     # FIXME: This legacy address support will be removed.
-    address = cashaddress.to_cash_address(address, regtest)
-    get_version(address)
+    # address = cashaddress.to_cash_address(address, regtest)
+    # get_version(address)
     Address = cashaddress.Address._cash_string(address)
     return bytes(Address.payload)
 
