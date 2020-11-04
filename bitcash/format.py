@@ -109,7 +109,7 @@ def wif_checksum_check(wif):
     return False
 
 
-def public_key_to_address(public_key, version='main'):
+def public_key_to_address(public_key, version='main', slp=False):
     if version == 'test':
         version = 'P2PKH-TESTNET'
     elif version == 'main':
@@ -123,6 +123,10 @@ def public_key_to_address(public_key, version='main'):
 
     payload = list(ripemd160_sha256(public_key))
     address = cashaddress.Address(payload=payload, version=version)
+
+    if slp:
+        address.slp_cash_address()
+        
     return address.cash_address()
 
 

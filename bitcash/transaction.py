@@ -2,6 +2,7 @@ import logging
 from collections import namedtuple
 
 from cashaddress import convert as cashaddress
+from bitcash.network.slp_services import SlpAPI
 
 from bitcash.crypto import double_sha256, sha256
 from bitcash.exceptions import InsufficientFunds
@@ -212,6 +213,229 @@ def sanitize_tx_data(unspents, outputs, fee, leftover, combine=True, message=Non
 
     return unspents, outputs
 
+def sanitize_slp_create_tx_data(address, unspents, outputs, fee, leftover, combine=True, combine_slp=True, message=None, compressed=True, custom_pushdata=False):
+    """
+    sanitize_tx_data()
+    fee is in satoshis per byte.
+    """
+
+    outputs = outputs.copy()
+
+    for i, output in enumerate(outputs):
+        dest, amount, currency = output
+        outputs[i] = (dest, currency_to_satoshi_cached(amount, currency))
+
+    # Random
+    if not unspents:
+        raise ValueError('Transactions must have at least one unspent.')
+
+    # Temporary storage so all outputs precede messages.
+    messages = []
+    total_op_return_size = 0
+
+    if message and (custom_pushdata is False):
+        try:
+            message = message.encode('utf-8')
+        except AttributeError:
+            pass # assume message is already a bytes-like object
+
+        message_chunks = chunk_data(message, MESSAGE_LIMIT)
+
+        for message in message_chunks:
+            messages.append((message, 0))
+            total_op_return_size += get_op_return_size(message, custom_pushdata=False)
+
+    elif message and (custom_pushdata is True):
+        if (len(message) >= 220):
+            # FIXME add capability for >220 bytes for custom pushdata elements
+            raise ValueError("Currently cannot exceed 220 bytes with custom_pushdata.")
+        else:
+            messages.append((message, 0))
+            total_op_return_size += get_op_return_size(message, custom_pushdata=True)
+
+
+
+    # Include return address in fee estimate.
+    total_in = 0
+    num_outputs = len(outputs) + 1
+    sum_outputs = sum(out[1] for out in outputs)
+
+    if combine:
+        # calculated_fee is in total satoshis.
+        calculated_fee = estimate_tx_fee(len(unspents), num_outputs, fee, compressed, total_op_return_size)
+        total_out = sum_outputs + calculated_fee
+        unspents = unspents.copy()
+        total_in += sum(unspent.amount for unspent in unspents)
+
+    else:
+        unspents = sorted(unspents, key=lambda x: x.amount)
+
+        index = 0
+
+        for index, unspent in enumerate(unspents):
+            total_in += unspent.amount
+            calculated_fee = estimate_tx_fee(len(unspents[:index + 1]), num_outputs, fee, compressed, total_op_return_size)
+            total_out = sum_outputs + calculated_fee
+
+            if total_in >= total_out:
+                break
+
+        unspents[:] = unspents[:index + 1]
+
+    remaining = total_in - total_out
+
+    if remaining > 0:
+        outputs.append((leftover, remaining))
+    elif remaining < 0:
+        raise InsufficientFunds('Balance {} is less than {} (including '
+                                'fee).'.format(total_in, total_out))
+
+    outputs.insert(0, messages[0])
+    # outputs.extend(messages)
+
+    return unspents, outputs
+
+def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, leftover, combine=True, combine_slp=True, message=None, compressed=True, custom_pushdata=False, regtest=False):
+    """
+    sanitize_tx_data()
+    fee is in satoshis per byte.
+    """
+
+    outputs = outputs.copy()
+
+    temp_slp_outputs = []
+    slp_outputs = []
+    reg_outputs = []
+    slp = ['simpleledger', 'slpreg', 'slptest']
+
+    for output in outputs:
+        addr = output[0]
+        if any(substring in addr for substring in slp):
+            slp_outputs.append(output[1])
+            temp_slp_outputs.append((output[0], 546, "satoshi")) 
+        else:
+            reg_outputs.append((output))
+
+    temp_slp_outputs.extend(reg_outputs)
+    outputs = temp_slp_outputs
+
+
+    slp_total_out = sum(slp_outputs)
+
+    sum_slp_outputs = sum(slp_outputs)
+
+    slp_unspents = SlpAPI.get_utxo_by_tokenId(slp_address, tokenId)
+
+    if combine_slp:
+        slp_total_in = 0
+        for unspent in slp_unspents:
+            slp_total_in += int(unspent[0])
+
+    else:           
+        index = 0
+
+        for index, unspent in enumerate(slp_unspents):
+            slp_total_in += int(unspent[0])
+            slp_total_out = sum_slp_outputs
+
+            if slp_total_in >= slp_total_out:
+                break
+
+        slp_unspents[:] = slp_unspents[:index + 1]
+
+    slp_remaining = slp_total_in - slp_total_out
+
+    if slp_remaining > 0:
+        #add to output array for op-return
+        print("x")
+    elif slp_remaining < 0:
+        raise InsufficientFunds('Balance {} is less than {} (including '
+                                'fee).'.format(slp_total_in, slp_total_out))
+
+
+    unspents = SlpAPI.filter_slp_txid(address, slp_address, unspents, slp_unspents) 
+
+    for i, output in enumerate(outputs):
+        dest, amount, currency = output
+        # LEGACYADDRESSDEPRECATION
+        # FIXME: Will be removed in an upcoming release, breaking compatibility with legacy addresses.
+        # dest = cashaddress.to_cash_address(dest, regtest)
+        outputs[i] = (dest, currency_to_satoshi_cached(amount, currency))
+
+    if not unspents["slp_utxos"] and not unspents["difference"]:
+        raise ValueError('Transactions must have at least one unspent.')
+
+    # Temporary storage so all outputs precede messages.
+    messages = []
+    total_op_return_size = 0
+
+    if message and (custom_pushdata is False):
+        try:
+            message = message.encode('utf-8')
+        except AttributeError:
+            pass # assume message is already a bytes-like object
+
+        message_chunks = chunk_data(message, MESSAGE_LIMIT)
+
+        for message in message_chunks:
+            messages.append((message, 0))
+            total_op_return_size += get_op_return_size(message, custom_pushdata=False)
+
+    elif message and (custom_pushdata is True):
+        if (len(message) >= 220):
+            # FIXME add capability for >220 bytes for custom pushdata elements
+            raise ValueError("Currently cannot exceed 220 bytes with custom_pushdata.")
+        else:
+            messages.append((message, 0))
+            total_op_return_size += get_op_return_size(message, custom_pushdata=True)
+
+
+    total_in = 0
+    num_outputs = len(outputs) + 1
+
+    sum_outputs = sum(out[1] for out in outputs)
+
+
+    if combine:
+        # calculated_fee is in total satoshis.
+        calculated_fee = estimate_tx_fee(len(unspents), num_outputs, fee, compressed, total_op_return_size)
+        total_out = sum_outputs + calculated_fee
+        unspents = unspents.copy()
+        total_in += sum(unspent.amount for unspent in unspents["slp_utxos"])
+        total_in += sum(unspent.amount for unspent in unspents["difference"])
+        unspents = unspents["slp_utxos"] + unspents["difference"]
+
+    else:
+        unspents["difference"] = sorted(unspents["difference"], key=lambda x: x.amount)
+
+        index = 0
+
+        for index, unspent in enumerate(unspents["difference"]):
+            total_in += unspent.amount
+            calculated_fee = estimate_tx_fee(
+                len(unspents["slp_utxos"] + unspents["difference"][:index + 1]), 
+                num_outputs, 
+                fee, 
+                compressed, 
+                total_op_return_size
+            )
+            total_out = sum_outputs + calculated_fee
+
+            if total_in >= total_out:
+                break
+
+        unspents = unspents["slp_utxos"] + unspents["difference"][:index + 1]
+    remaining = total_in - total_out
+
+    if remaining > 0:
+        outputs.append((leftover, remaining))
+    elif remaining < 0:
+        raise InsufficientFunds('Balance {} is less than {} (including '
+                                'fee).'.format(total_in, total_out))
+
+    outputs.extend(messages)
+
+    return unspents, outputs
 
 def construct_output_block(outputs, custom_pushdata=False):
 
