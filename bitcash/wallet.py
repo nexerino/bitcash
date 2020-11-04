@@ -491,7 +491,6 @@ class PrivateKey(BaseKey):
         )
 
         # NetworkAPI.broadcast_tx(tx_hex)
-        print(tx_hex)
 
         return calc_txid(tx_hex)
 

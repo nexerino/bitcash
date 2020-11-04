@@ -210,13 +210,6 @@ def sanitize_tx_data(unspents, outputs, fee, leftover, combine=True, message=Non
 
     outputs.extend(messages)
 
-    print("unspents")
-    print(unspents)
-
-
-    print("outputs")
-    print(outputs)
-
     return unspents, outputs
 
 
@@ -450,21 +443,13 @@ def sanitize_slp_tx_data(address, slp_address, unspents, outputs, tokenId, fee, 
                                 'fee).'.format(total_in, total_out))
 
     outputs.extend(messages)
-    # print("unspents")
-    # print(unspents)
 
-
-    # print("outputs")
-    # print(outputs)
     return unspents, outputs
 
 
 def construct_output_block(outputs, custom_pushdata=False):
 
     output_block = b''
-
-    print(outputs)
-
 
     for data in outputs:
         dest, amount = data

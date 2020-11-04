@@ -31,8 +31,6 @@ class SlpAPI():
 
     @classmethod
     def get_balance(cls, address, tokenId=None, limit=100, skip=0):
-        # address = "simpleledger:qpt8z56sjcng8eux4pgvl7msnns2fzj05s89rl7w90"
-        # tokenId = "7f27766677948e02aca409bf344632f3e8e350105017ef14d88fc2c048347146"
 
         if tokenId:
             query = {
@@ -221,8 +219,6 @@ class SlpAPI():
 
     @classmethod
     def get_utxo_by_tokenId(cls, address, tokenId, limit=100):
-        # tokenId = "7f27766677948e02aca409bf344632f3e8e350105017ef14d88fc2c048347146"
-        # address = "simpleledger:qpt8z56sjcng8eux4pgvl7msnns2fzj05s89rl7w90"
 
         query = {
             "v": 3,
@@ -280,7 +276,7 @@ class SlpAPI():
 
         return [
             
-            (#a['_id'],
+            (
             a['token_balance'],
             a['address'],
             a['txid'],
@@ -292,8 +288,7 @@ class SlpAPI():
 
     @classmethod
     def get_all_slp_utxo_by_address(cls, address, limit=100):
-        # tokenId = "7f27766677948e02aca409bf344632f3e8e350105017ef14d88fc2c048347146"
-        # address = "simpleledger:qpt8z56sjcng8eux4pgvl7msnns2fzj05s89rl7w90"
+        
 
         query = {
             "v": 3,
@@ -349,7 +344,7 @@ class SlpAPI():
 
         return [
             
-            (#a['_id'],
+            (
             a['token_balance'],
             a['address'],
             a['txid'],
@@ -362,7 +357,7 @@ class SlpAPI():
 
     @classmethod
     def get_mint_baton(cls, tokenId, limit=10):
-        # tokenId = "ae885f8e1bd2a09c5f8dcf19cb9a837d8c48b370190f31841b8a4817ebdbb9d7
+        
         query = {
             "v": 3,
             "q": {
@@ -417,24 +412,6 @@ class SlpAPI():
         ]
 
 
-    # @classmethod
-    # def slp_unspent_to_unspent(cls, address, slp_unspents):
-    #   unspents = NetworkAPI.get_unspent(address)
-    #   index = 0
-
-    #   matched = []
-
-    #   for index, unspent in enumerate(unspents):
-    #     for slp_unspent in slp_unspents:
-    #       if slp_unspent[2] == unspent.txid:
-    #         print("Success", index)
-    #         matched.append(unspent)
-    #         print(matched)
-          
-
-    #   return matched
-
-
     @classmethod
     def filter_slp_txid(cls, address, slp_address, unspents, slp_unspents):
 
@@ -447,6 +424,4 @@ class SlpAPI():
       difference = [unspent for unspent in unspents if not _is_slp(unspent, slp_utxos)]
       slp_utxos = [unspent for unspent in unspents if _is_slp(unspent, slp_utxos)]
 
-
-      # return slp_utxos + difference
       return {"slp_utxos": slp_utxos, "difference": difference}
